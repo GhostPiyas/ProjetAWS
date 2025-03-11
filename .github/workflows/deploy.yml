@@ -24,7 +24,7 @@ jobs:
 
       - name: Validate Terraform Configuration
         run: terraform validate
-        working-directory: terraform
+        working-directory: ProjetAWS/terraform
 
       - name: Terraform Plan
         env:
