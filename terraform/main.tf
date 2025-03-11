@@ -1,11 +1,60 @@
 provider "aws" {
-  region     = "eu-west-3"
+  region = "eu-west-3"
 }
 
-resource "aws_instance" "app" {
-  ami             = "ami-0359cb6c0c97c6607"
-  instance_type   = "t2.micro"
-  key_name        = "Linux_key"
+# Création d'un groupe de sécurité autorisant les ports nécessaires
+resource "aws_security_group" "example" {
+  name_prefix = "example-sg-"
+
+  # Autoriser SSH (port 22)
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Autoriser l'accès à Dolibarr (port 8080)
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Autoriser l'accès à Prometheus (port 9090)
+  ingress {
+    from_port   = 9090
+    to_port     = 9090
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Autoriser l'accès à Grafana (port 3000)
+  ingress {
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Autoriser tout le trafic sortant
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Création de la première instance (Dolibarr)
+resource "aws_instance" "dolibarr_instance" {
+  ami           = "ami-0359cb6c0c97c6607"
+  instance_type = "t2.micro"
+  key_name      = "Linux_key"
+
+  # Association du groupe de sécurité
+  vpc_security_group_ids = [aws_security_group.example.id]
 
   user_data = <<-EOF
               #!/bin/bash
@@ -13,7 +62,6 @@ resource "aws_instance" "app" {
               sudo yum install -y docker docker-compose
               sudo systemctl start docker
               sudo systemctl enable docker
-              sudo usermod -aG docker ec2-user
               
               mkdir -p /home/ec2-user/dolibarr
               cd /home/ec2-user/dolibarr
@@ -47,6 +95,53 @@ resource "aws_instance" "app" {
               
               volumes:
                 db_data:' > docker-compose.yml
+              
+              docker-compose up -d
+              EOF
+}
+
+# Création de la deuxième instance (Prometheus et Grafana)
+resource "aws_instance" "prometheus_grafana_instance" {
+  ami           = "ami-0359cb6c0c97c6607"
+  instance_type = "t2.micro"
+  key_name      = "Linux_key"
+
+  # Association du groupe de sécurité
+  vpc_security_group_ids = [aws_security_group.example.id]
+
+  user_data = <<-EOF
+              #!/bin/bash
+              sudo yum update -y
+              sudo yum install -y docker docker-compose
+              sudo systemctl start docker
+              sudo systemctl enable docker
+              
+              mkdir -p /home/ec2-user/prometheus
+              cd /home/ec2-user/prometheus
+              echo 'version: "3.8"
+              services:
+                prometheus:
+                  image: prom/prometheus
+                  container_name: prometheus
+                  restart: always
+                  ports:
+                    - "9090:9090"
+                  volumes:
+                    - ./prometheus.yml:/etc/prometheus/prometheus.yml
+                
+                grafana:
+                  image: grafana/grafana
+                  container_name: grafana
+                  restart: always
+                  ports:
+                    - "3000:3000"
+                  environment:
+                    GF_SECURITY_ADMIN_USER: admin
+                    GF_SECURITY_ADMIN_PASSWORD: admin
+                  depends_on:
+                    - prometheus
+              volumes:
+                grafana_data:' > docker-compose.yml
               
               docker-compose up -d
               EOF
