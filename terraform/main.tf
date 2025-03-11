@@ -2,11 +2,10 @@ provider "aws" {
   region = "eu-west-3"
 }
 
-# Création d'un groupe de sécurité autorisant les ports nécessaires
+# Groupe de sécurité pour autoriser SSH et les ports nécessaires
 resource "aws_security_group" "example" {
   name_prefix = "example-sg-"
 
-  # Autoriser SSH (port 22)
   ingress {
     from_port   = 22
     to_port     = 22
@@ -14,7 +13,6 @@ resource "aws_security_group" "example" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Autoriser l'accès à Dolibarr (port 8080)
   ingress {
     from_port   = 8080
     to_port     = 8080
@@ -22,7 +20,6 @@ resource "aws_security_group" "example" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Autoriser l'accès à Prometheus (port 9090)
   ingress {
     from_port   = 9090
     to_port     = 9090
@@ -30,7 +27,6 @@ resource "aws_security_group" "example" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Autoriser l'accès à Grafana (port 3000)
   ingress {
     from_port   = 3000
     to_port     = 3000
@@ -38,7 +34,6 @@ resource "aws_security_group" "example" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Autoriser tout le trafic sortant
   egress {
     from_port   = 0
     to_port     = 0
@@ -47,13 +42,17 @@ resource "aws_security_group" "example" {
   }
 }
 
-# Création de la première instance (Dolibarr)
+# Instance 1 : Dolibarr
 resource "aws_instance" "dolibarr_instance" {
   ami           = "ami-0359cb6c0c97c6607"
   instance_type = "t2.micro"
   key_name      = "Linux_key"
 
-  # Association du groupe de sécurité
+  # Nom explicite pour l'instance Dolibarr
+  tags = {
+    Name = "Instance 1 - Dolibarr"
+  }
+
   vpc_security_group_ids = [aws_security_group.example.id]
 
   user_data = <<-EOF
@@ -100,13 +99,17 @@ resource "aws_instance" "dolibarr_instance" {
               EOF
 }
 
-# Création de la deuxième instance (Prometheus et Grafana)
+# Instance 2 : Prometheus + Grafana
 resource "aws_instance" "prometheus_grafana_instance" {
   ami           = "ami-0359cb6c0c97c6607"
   instance_type = "t2.micro"
   key_name      = "Linux_key"
 
-  # Association du groupe de sécurité
+  # Nom explicite pour l'instance Prometheus + Grafana
+  tags = {
+    Name = "Instance 2 - Grafana-Prometheus"
+  }
+
   vpc_security_group_ids = [aws_security_group.example.id]
 
   user_data = <<-EOF
