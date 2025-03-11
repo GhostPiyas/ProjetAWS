@@ -3,7 +3,7 @@ name: Deploy to AWS
 on:
   push:
     branches:
-      - main  # Exécute Terraform à chaque push sur main
+      - main  # Déclenche l’action sur chaque push sur la branche main
 
 jobs:
   deploy:
