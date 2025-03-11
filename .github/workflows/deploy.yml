@@ -1,0 +1,41 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main  # Exécute le workflow sur chaque push sur main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3  # Dernière version
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2  # Version plus récente
+        with:
+          terraform_version: latest
+
+      - name: Initialize Terraform
+        run: terraform init
+        working-directory: terraform
+
+      - name: Validate Terraform Configuration
+        run: terraform validate
+        working-directory: terraform
+
+      - name: Terraform Plan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: terraform plan
+        working-directory: terraform
+
+      - name: Apply Terraform Changes
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: terraform apply -auto-approve
+        working-directory: terraform
