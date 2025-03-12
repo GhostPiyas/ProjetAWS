@@ -50,14 +50,6 @@ resource "aws_security_group" "example" {
 }
 
 # ====================
-# Réutilisation du rôle IAM existant
-# ====================
-resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "ec2_instance_profile"
-  role = "ec2_instance_role" # Réutilisation du rôle IAM existant
-}
-
-# ====================
 # RDS pour Dolibarr
 # ====================
 resource "aws_db_instance" "dolibarr_db" {
@@ -89,7 +81,7 @@ resource "aws_instance" "dolibarr_instance" {
   }
 
   vpc_security_group_ids = [aws_security_group.example.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
+  iam_instance_profile   = "ec2_instance_profile"  # Réutilise le profile existant
 
   user_data = <<-EOF
               #!/bin/bash
@@ -157,7 +149,7 @@ resource "aws_instance" "prometheus_grafana_instance" {
   }
 
   vpc_security_group_ids = [aws_security_group.example.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
+  iam_instance_profile   = "ec2_instance_profile"  # Réutilise le profile existant
 
   user_data = <<-EOF
               #!/bin/bash
