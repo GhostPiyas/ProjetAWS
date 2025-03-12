@@ -72,7 +72,7 @@ EOF
 }
 
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "ec2_instance_profile"
+  name = "ec2_instance_profile_new" # Nouveau nom pour éviter le conflit
   role = aws_iam_role.ec2_role.name
 }
 
