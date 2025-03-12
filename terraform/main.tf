@@ -2,10 +2,13 @@ provider "aws" {
   region = "eu-west-3"
 }
 
-# Groupe de sécurité pour autoriser SSH et les ports nécessaires
+# ====================
+# Groupe de sécurité
+# ====================
 resource "aws_security_group" "example" {
   name_prefix = "example-sg-"
 
+  # Autoriser SSH (port 22)
   ingress {
     from_port   = 22
     to_port     = 22
@@ -13,6 +16,7 @@ resource "aws_security_group" "example" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Autoriser l'accès à Dolibarr (port 8080)
   ingress {
     from_port   = 8080
     to_port     = 8080
@@ -20,6 +24,7 @@ resource "aws_security_group" "example" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Autoriser l'accès à Prometheus (port 9090)
   ingress {
     from_port   = 9090
     to_port     = 9090
@@ -27,6 +32,7 @@ resource "aws_security_group" "example" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Autoriser l'accès à Grafana (port 3000)
   ingress {
     from_port   = 3000
     to_port     = 3000
@@ -34,6 +40,7 @@ resource "aws_security_group" "example" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Autoriser tout le trafic sortant
   egress {
     from_port   = 0
     to_port     = 0
@@ -42,18 +49,66 @@ resource "aws_security_group" "example" {
   }
 }
 
+# ====================
+# Rôle IAM pour EC2
+# ====================
+resource "aws_iam_role" "ec2_role" {
+  name = "ec2_instance_role"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_instance_profile" "ec2_instance_profile" {
+  name = "ec2_instance_profile"
+  role = aws_iam_role.ec2_role.name
+}
+
+# ====================
+# RDS pour Dolibarr
+# ====================
+resource "aws_db_instance" "dolibarr_db" {
+  allocated_storage    = 20
+  engine               = "mariadb"
+  engine_version       = "10.5"
+  instance_class       = "db.t3.micro"
+  name                 = "dolibarrdb"
+  username             = "dolibarr_user"
+  password             = "dolibarr_password"
+  publicly_accessible  = true
+  skip_final_snapshot  = true
+
+  tags = {
+    Name = "Dolibarr-Database"
+  }
+}
+
+# ====================
 # Instance 1 : Dolibarr
+# ====================
 resource "aws_instance" "dolibarr_instance" {
   ami           = "ami-0359cb6c0c97c6607"
   instance_type = "t2.micro"
   key_name      = "Linux_key"
 
-  # Nom explicite pour l'instance Dolibarr
   tags = {
     Name = "Instance 1 - Dolibarr"
   }
 
   vpc_security_group_ids = [aws_security_group.example.id]
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
 
   user_data = <<-EOF
               #!/bin/bash
@@ -99,18 +154,20 @@ resource "aws_instance" "dolibarr_instance" {
               EOF
 }
 
+# ====================
 # Instance 2 : Prometheus + Grafana
+# ====================
 resource "aws_instance" "prometheus_grafana_instance" {
   ami           = "ami-0359cb6c0c97c6607"
   instance_type = "t2.micro"
   key_name      = "Linux_key"
 
-  # Nom explicite pour l'instance Prometheus + Grafana
   tags = {
     Name = "Instance 2 - Grafana-Prometheus"
   }
 
   vpc_security_group_ids = [aws_security_group.example.id]
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
 
   user_data = <<-EOF
               #!/bin/bash
