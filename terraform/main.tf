@@ -16,10 +16,10 @@ resource "aws_security_group" "example" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Autoriser l'accès à Dolibarr (port 8080)
+  # Autoriser l'accès à Dolibarr (port 8181)
   ingress {
-    from_port   = 8080
-    to_port     = 8080
+    from_port   = 8181
+    to_port     = 8181
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -84,7 +84,7 @@ resource "aws_db_instance" "dolibarr_db" {
   engine               = "mariadb"
   engine_version       = "10.5"
   instance_class       = "db.t3.micro"
-  db_name              = "dolibarrdb"  # Utilisation de db_name au lieu de name
+  db_name              = "dolibarrdb"
   username             = "dolibarr_user"
   password             = "dolibarr_password"
   publicly_accessible  = true
@@ -112,11 +112,20 @@ resource "aws_instance" "dolibarr_instance" {
 
   user_data = <<-EOF
               #!/bin/bash
-              sudo yum update -y
-              sudo yum install -y docker docker-compose
+              if command -v yum > /dev/null; then
+                sudo yum update -y
+                sudo yum install -y docker docker-compose
+              elif command -v apt > /dev/null; then
+                sudo apt-get update -y
+                sudo apt-get install -y docker.io docker-compose
+              else
+                echo "No suitable package manager found." >&2
+                exit 1
+              fi
+
               sudo systemctl start docker
               sudo systemctl enable docker
-              
+
               mkdir -p /home/ec2-user/dolibarr
               cd /home/ec2-user/dolibarr
               echo 'version: "3.8"
@@ -138,7 +147,7 @@ resource "aws_instance" "dolibarr_instance" {
                   container_name: dolibarr-app
                   restart: always
                   ports:
-                    - "8080:80"
+                    - "8181:80"
                   environment:
                     DOLI_DB_HOST: db
                     DOLI_DB_USER: dolibarr_user
@@ -171,11 +180,20 @@ resource "aws_instance" "prometheus_grafana_instance" {
 
   user_data = <<-EOF
               #!/bin/bash
-              sudo yum update -y
-              sudo yum install -y docker docker-compose
+              if command -v yum > /dev/null; then
+                sudo yum update -y
+                sudo yum install -y docker docker-compose
+              elif command -v apt > /dev/null; then
+                sudo apt-get update -y
+                sudo apt-get install -y docker.io docker-compose
+              else
+                echo "No suitable package manager found." >&2
+                exit 1
+              fi
+
               sudo systemctl start docker
               sudo systemctl enable docker
-              
+
               mkdir -p /home/ec2-user/prometheus
               cd /home/ec2-user/prometheus
               echo 'version: "3.8"
