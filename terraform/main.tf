@@ -84,7 +84,7 @@ resource "aws_db_instance" "dolibarr_db" {
   engine               = "mariadb"
   engine_version       = "10.5"
   instance_class       = "db.t3.micro"
-  name                 = "dolibarrdb"
+  db_name              = "dolibarrdb"  # Utilisation de db_name au lieu de name
   username             = "dolibarr_user"
   password             = "dolibarr_password"
   publicly_accessible  = true
